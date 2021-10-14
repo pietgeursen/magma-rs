@@ -93,7 +93,9 @@ mod tests {
     proptest! {
         #[test]
         fn first_byte_of_an_encoded_root_event_is_zero(root_event in root_event_strategy() ){
-            let mut buffer = [0; 512]; // TODO get the size from Event?
+            let mut buffer = Vec::new();
+            buffer.resize(root_event.encoding_length(), 0);
+
             root_event.encode(&mut buffer).unwrap();
 
             assert_eq!(buffer[0], 0)
@@ -101,7 +103,8 @@ mod tests {
 
         #[test]
         fn next_bytes_of_an_encoded_root_event_contain_digest(root_event in root_event_strategy()){
-            let mut buffer = [0; 512]; // TODO get the size from Event?
+            let mut buffer = Vec::new();
+            buffer.resize(root_event.encoding_length(), 0);
             root_event.encode(&mut buffer).unwrap();
 
             let digest = root_event.digest();
@@ -110,7 +113,8 @@ mod tests {
 
         #[test]
         fn last_bytes_of_an_encoded_root_event_contain_digest_len_as_varu64(root_event in root_event_strategy()){
-            let mut buffer = [0; 512]; // TODO get the size from Event?
+            let mut buffer = Vec::new();
+            buffer.resize(root_event.encoding_length(), 0);
             root_event.encode(&mut buffer).unwrap();
 
             let digest = root_event.digest();
@@ -125,18 +129,5 @@ mod tests {
             assert!(res.is_ok() || res.is_err());
         }
 
-    }
-
-    #[test]
-    fn root_event_encode_basic() {
-        let digest = Blake2b::digest(b"hello");
-        let root_event = Event::<u64, Blake2b>::Root { digest };
-
-        let mut buffer = [0; 512]; // TODO get the size from Event?
-
-        root_event.encode(&mut buffer).unwrap();
-
-        assert_eq!(buffer[0], 0, "first byte of a root event must be 0");
-        assert_eq!(&buffer[1..digest.len() + 1], digest.as_slice())
     }
 }
