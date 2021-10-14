@@ -123,7 +123,7 @@ mod tests {
             let digest = Blake2b::digest(&payload);
             Event::Root{
                 digest,
-                size: digest.len() as u64
+                size: payload.len() as u64
             }
         }
     }
