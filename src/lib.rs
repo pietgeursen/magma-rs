@@ -55,7 +55,7 @@ where
                     .copy_from_slice(digest_bytes);
                 next_byte_num += digest_bytes.len();
 
-                // Followed by the digest length
+                // Followed by the size
                 next_byte_num += varu64_encode(*size, &mut out[next_byte_num..]);
                 Ok(next_byte_num)
             }
