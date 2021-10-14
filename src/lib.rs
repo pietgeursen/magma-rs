@@ -123,7 +123,7 @@ mod tests {
             let digest = Blake2b::digest(&payload);
             Event::Root{
                 digest,
-                size: payload.len() as u64
+                size: digest.len() as u64
             }
         }
     }
@@ -158,9 +158,9 @@ mod tests {
 
             let mut size_buffer = Vec::new();
             size_buffer.resize(varu64::encoding_length(root_event.size()), 0);
-            let n = varu64::encode(root_event.size(), &mut size_buffer);
+            let (n,_ ) = varu64::decode( &buffer[digest.len() + 1 .. ]).unwrap();
 
-            assert_eq!(&buffer[digest.len() + 1 .. digest.len() + 1 + n], &size_buffer[..n])
+            assert_eq!(n, root_event.size())
         }
 
         #[test]
