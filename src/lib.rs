@@ -13,7 +13,7 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Event<M: Monoid, D: Digest> {
+pub enum Event<D: Digest> {
     Root {
         digest: Output<D>,
         size: u64,
@@ -24,18 +24,17 @@ pub enum Event<M: Monoid, D: Digest> {
         sequence_number: u64, // The first **child** sequence_number starts at **2**
 
         predecessor_event_link: Output<D>,
-        predecessor_delta: M,        // change compared to the predecessor event
+        predecessor_delta: Output<D>,        // change compared to the predecessor event
         predecessor_delta_size: u64, // size in bytes of this.predecessor_delta
 
         skip_event: Output<D>, // the skip event, None if this is the first event
-        skip_delta: M,         // change compared to the skip event
+        skip_delta: Output<D>,         // change compared to the skip event
         skip_delta_size: u64,  // size in bytes of this.skip_delta
     },
 }
 
-impl<M, D> Event<M, D>
+impl<D> Event<D>
 where
-    M: Monoid,
     D: Digest,
 {
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, Error> {
@@ -116,7 +115,7 @@ mod tests {
     use blake2::Blake2b;
     use proptest::prelude::*;
 
-    type MyEvent = Event<u64, Blake2b>;
+    type MyEvent = Event<Blake2b>;
 
     prop_compose! {
         fn root_event_strategy()(payload in any::<Vec<u8>>()) -> MyEvent{
