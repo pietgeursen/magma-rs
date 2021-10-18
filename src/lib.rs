@@ -212,6 +212,7 @@ where
         // Is a Root
         if bytes[0] == 0 {
             let end_of_digest_index = D::output_size() + 1;
+            ensure!(bytes.len() >= end_of_digest_index, OutBufferTooSmall);
             let digest = Output::<D>::clone_from_slice(&bytes[1..end_of_digest_index]);
             let (size, _) =
                 varu64_decode(&bytes[end_of_digest_index..]).map_err(|(varu_error, _)| {
@@ -372,12 +373,12 @@ mod tests {
     }
 
     prop_compose! {
-        fn non_zero_u64()(n in any::<u64>())-> NonZeroU64{
+        fn valid_sequence_number()(n in any::<u64>())-> NonZeroU64{
             NonZeroU64::new(n).unwrap_or(NonZeroU64::new(2).unwrap())
         }
     }
     prop_compose! {
-        fn child_with_skip_same_as_predecessor_event_strategy()(payload in any::<Vec<u8>>(), sequence_number in non_zero_u64(), digested_root_event in digested_root_event_strategy()) -> MyEvent{
+        fn child_with_skip_same_as_predecessor_event_strategy()(payload in any::<Vec<u8>>(), sequence_number in valid_sequence_number(), digested_root_event in digested_root_event_strategy()) -> MyEvent{
             let delta_digest = Blake2b::digest(&payload);
             Event::Child{
                 sequence_number,
@@ -391,7 +392,7 @@ mod tests {
         }
     }
     prop_compose! {
-        fn child_event_strategy()(payload in any::<Vec<u8>>(), payload_two in any::<Vec<u8>>(), sequence_number in non_zero_u64(), predecessor_event_link in digested_root_event_strategy(), skip_event_link in digested_root_event_strategy_one_byte_different()) -> MyEvent{
+        fn child_event_strategy()(payload in any::<Vec<u8>>(), payload_two in any::<Vec<u8>>(), sequence_number in valid_sequence_number(), predecessor_event_link in digested_root_event_strategy(), skip_event_link in digested_root_event_strategy_one_byte_different()) -> MyEvent{
 
             let delta_digest = Blake2b::digest(&payload);
             let skip_delta_digest = Blake2b::digest(&payload_two);
@@ -406,6 +407,15 @@ mod tests {
                 skip_delta_size: payload_two.len() as u64
             }
         }
+    }
+
+    fn random_event_stratedy() -> BoxedStrategy<MyEvent> {
+        prop_oneof![
+            root_event_strategy(),
+            child_with_skip_same_as_predecessor_event_strategy(),
+            child_event_strategy()
+        ]
+        .boxed()
     }
 
     proptest! {
@@ -444,51 +454,32 @@ mod tests {
         }
 
         #[test]
-        fn encoding_root_event_never_panics_from_incorrect_out_buffer_size(root_event in root_event_strategy(), mut out in any::<Vec<u8>>()){
-            let res = root_event.encode(&mut out);
+        fn encode_decode_event(event in random_event_stratedy()){
+            let mut buffer = Vec::new();
+            buffer.resize(event.encoding_length(), 0);
+
+            let encoded_size = event.encode(&mut buffer).unwrap();
+
+            let decoded = MyEvent::decode(&buffer[..encoded_size]).unwrap();
+
+            assert_eq!(event, decoded);
+        }
+
+        #[test]
+        fn encoding_never_panics_from_incorrect_out_buffer_size(event in random_event_stratedy(), mut out in any::<Vec<u8>>()){
+            let res = event.encode(&mut out);
             assert!(res.is_ok() || res.is_err());
         }
 
         #[test]
-        fn encoding_first_child_event_never_panics_from_incorrect_out_buffer_size(child_event in child_with_skip_same_as_predecessor_event_strategy(), mut out in any::<Vec<u8>>()){
-            let res = child_event.encode(&mut out);
+        fn decoding_never_panics_from_incorrect_out_buffer_size(event in random_event_stratedy(), truncation_amount in 1..1000usize){
+            let mut buffer = Vec::new();
+            buffer.resize(event.encoding_length(), 0);
+            let encoded_size = event.encode(&mut buffer).unwrap();
+
+            let res = MyEvent::decode(&buffer[.. std::cmp::min(encoded_size, truncation_amount)]);
+
             assert!(res.is_ok() || res.is_err());
-        }
-
-        #[test]
-        fn encode_decode_root_event(root_event in root_event_strategy()){
-            let mut buffer = Vec::new();
-            buffer.resize(root_event.encoding_length(), 0);
-
-            root_event.encode(&mut buffer).unwrap();
-
-            let decoded = MyEvent::decode(&buffer).unwrap();
-
-            assert_eq!(decoded, root_event)
-        }
-
-        #[test]
-        fn encode_decode_child_no_skips_event(child_event in child_with_skip_same_as_predecessor_event_strategy()){
-            let mut buffer = Vec::new();
-            buffer.resize(child_event.encoding_length(), 0);
-
-            let encoded_size = child_event.encode(&mut buffer).unwrap();
-
-            let decoded = MyEvent::decode(&buffer[..encoded_size]).unwrap();
-
-            assert_eq!(child_event, decoded);
-        }
-
-        #[test]
-        fn encode_decode_child_event(child_event in child_event_strategy()){
-            let mut buffer = Vec::new();
-            buffer.resize(child_event.encoding_length(), 0);
-
-            let encoded_size = child_event.encode(&mut buffer).unwrap();
-
-            let decoded = MyEvent::decode(&buffer[..encoded_size]).unwrap();
-
-            assert_eq!(child_event, decoded);
         }
 
     }
