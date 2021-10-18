@@ -71,9 +71,9 @@ where
     Child {
         sequence_number: NonZeroU64, // The first **child** sequence_number starts at **2**
 
+        predecessor_event_link: Output<D>,
         delta_digest: Output<D>,
         delta_size: u64,
-        predecessor_event_link: Output<D>,
 
         skip_event_link: Output<D>, // the skip event, None if this is the first event
         skip_delta_digest: Output<D>, // change compared to the skip event
