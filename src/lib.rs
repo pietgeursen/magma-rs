@@ -316,13 +316,14 @@ where
                 predecessor_event_link,
                 skip_event_link,
                 skip_delta_size,
-                ..
+                skip_delta_digest,
             } => {
                 delta_digest.len()
                     + varu64::encoding_length(*delta_size)
                     + varu64::encoding_length_non_zero_u64(*sequence_number)
                     + predecessor_event_link.len()
                     + skip_event_link.len()
+                    + skip_delta_digest.len()
                     + varu64::encoding_length(*skip_delta_size)
             }
         }
@@ -361,6 +362,15 @@ mod tests {
             Blake2b::digest(&root_event)
         }
     }
+
+    prop_compose! {
+        fn digested_root_event_strategy_one_byte_different()(root_event in digested_root_event_strategy()) -> Output<Blake2b> {
+            let mut event = root_event.clone();
+            event[0] ^= 1;
+            event
+        }
+    }
+
     prop_compose! {
         fn non_zero_u64()(n in any::<u64>())-> NonZeroU64{
             NonZeroU64::new(n).unwrap_or(NonZeroU64::new(2).unwrap())
@@ -377,6 +387,23 @@ mod tests {
                 skip_event_link: digested_root_event,
                 skip_delta_digest: delta_digest,
                 skip_delta_size: payload.len() as u64
+            }
+        }
+    }
+    prop_compose! {
+        fn child_event_strategy()(payload in any::<Vec<u8>>(), payload_two in any::<Vec<u8>>(), sequence_number in non_zero_u64(), predecessor_event_link in digested_root_event_strategy(), skip_event_link in digested_root_event_strategy_one_byte_different()) -> MyEvent{
+
+            let delta_digest = Blake2b::digest(&payload);
+            let skip_delta_digest = Blake2b::digest(&payload_two);
+
+            Event::Child{
+                sequence_number,
+                delta_digest,
+                delta_size: payload.len() as u64,
+                predecessor_event_link,
+                skip_event_link,
+                skip_delta_digest,
+                skip_delta_size: payload_two.len() as u64
             }
         }
     }
@@ -439,8 +466,9 @@ mod tests {
 
             assert_eq!(decoded, root_event)
         }
+
         #[test]
-        fn encode_decode_first_child_event(child_event in child_with_skip_same_as_predecessor_event_strategy()){
+        fn encode_decode_child_no_skips_event(child_event in child_with_skip_same_as_predecessor_event_strategy()){
             let mut buffer = Vec::new();
             buffer.resize(child_event.encoding_length(), 0);
 
@@ -448,7 +476,19 @@ mod tests {
 
             let decoded = MyEvent::decode(&buffer[..encoded_size]).unwrap();
 
-            assert!(Event::eq(&child_event, &decoded));
+            assert_eq!(child_event, decoded);
+        }
+
+        #[test]
+        fn encode_decode_child_event(child_event in child_event_strategy()){
+            let mut buffer = Vec::new();
+            buffer.resize(child_event.encoding_length(), 0);
+
+            let encoded_size = child_event.encode(&mut buffer).unwrap();
+
+            let decoded = MyEvent::decode(&buffer[..encoded_size]).unwrap();
+
+            assert_eq!(child_event, decoded);
         }
 
     }
