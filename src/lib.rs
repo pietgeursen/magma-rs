@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use core::num::NonZeroU64;
-pub use digest::{Digest, Output};
+pub use digest::{Digest, Output, generic_array::GenericArray};
 pub use frunk::Semigroup;
 use snafu::{ensure, OptionExt, Snafu};
 pub use varu64::{
@@ -215,11 +215,7 @@ where
             // The first byte is just whether or not it's a Root.
             let bytes = &bytes[1..];
 
-            let delta_digest = bytes
-                .get(..digest_size)
-                .map(Output::<D>::clone_from_slice)
-                .context(OutBufferTooSmall)?;
-            let bytes = &bytes[digest_size..];
+            let (delta_digest, bytes) = Self::decode_digest(bytes, digest_size)?;
 
             let (size, _) = varu64_decode(&bytes).map_err(|(varu_error, _)| {
                 Error::DecodeRootSizeFromVaru64 { source: varu_error }
@@ -239,17 +235,8 @@ where
                 DecodedSequenceNumberForChildWasNotLargerThanOne
             );
 
-            let predecessor_event_link = bytes
-                .get(..digest_size)
-                .map(Output::<D>::clone_from_slice)
-                .context(OutBufferTooSmall)?;
-            let bytes = &bytes[digest_size..];
-
-            let delta_digest = bytes
-                .get(..digest_size)
-                .map(Output::<D>::clone_from_slice)
-                .context(OutBufferTooSmall)?;
-            let bytes = &bytes[digest_size..];
+            let (predecessor_event_link, bytes) = Self::decode_digest(bytes, digest_size)?;
+            let (delta_digest, bytes) = Self::decode_digest(bytes, digest_size)?;
 
             let (delta_size, bytes) = varu64_decode(bytes)
                 .map_err(|(err, _)| Error::DecodeDeltaSizeFromVaru64 { source: err })?;
@@ -264,18 +251,9 @@ where
                     delta_size,
                 )),
                 _ => {
-                    let skip_event_link = bytes
-                        .get(..digest_size)
-                        .map(Output::<D>::clone_from_slice)
-                        .context(OutBufferTooSmall)?;
-                    let bytes = &bytes[digest_size..];
 
-                    let skip_delta_digest = bytes
-                        .get(..digest_size)
-                        .map(Output::<D>::clone_from_slice)
-                        .context(OutBufferTooSmall)?;
-                    let bytes = &bytes[digest_size..];
-
+                    let (skip_event_link, bytes) = Self::decode_digest(bytes, digest_size)?;
+                    let (skip_delta_digest, bytes) = Self::decode_digest(bytes, digest_size)?;
                     let (skip_delta_size, _) = varu64_decode(bytes)
                         .map_err(|(err, _)| Error::DecodeSkipDeltaSizeFromVaru64 { source: err })?;
 
@@ -342,7 +320,18 @@ where
             }
         }
     }
+
+    fn decode_digest<'a>(bytes: &'a[u8], digest_size: usize) -> Result<(GenericArray<u8, <D as Digest>::OutputSize>, &'a[u8]), Error> {
+        let delta_digest = bytes
+            .get(..digest_size)
+            .map(Output::<D>::clone_from_slice)
+            .context(OutBufferTooSmall)?;
+        let bytes = &bytes[digest_size..];
+        Ok((delta_digest, bytes))
+    }
+
 }
+
 
 #[cfg(test)]
 mod tests {
