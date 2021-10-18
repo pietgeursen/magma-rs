@@ -3,7 +3,7 @@
 pub use core::num::NonZeroU64;
 pub use digest::{Digest, Output};
 pub use frunk::Semigroup;
-use snafu::{ensure, Snafu};
+use snafu::{ensure, OptionExt, Snafu};
 pub use varu64::{
     decode as varu64_decode, decode_non_zero_u64, encode as varu64_encode, encode_non_zero_u64,
 };
@@ -208,19 +208,25 @@ where
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, Error> {
         ensure!(bytes.len() > 0, DecodeInputIsLengthZero);
+        let digest_size = D::output_size();
 
         // Is a Root
         if bytes[0] == 0 {
-            let end_of_digest_index = D::output_size() + 1;
-            ensure!(bytes.len() >= end_of_digest_index, OutBufferTooSmall);
-            let digest = Output::<D>::clone_from_slice(&bytes[1..end_of_digest_index]);
-            let (size, _) =
-                varu64_decode(&bytes[end_of_digest_index..]).map_err(|(varu_error, _)| {
-                    Error::DecodeRootSizeFromVaru64 { source: varu_error }
-                })?;
+            // The first byte is just whether or not it's a Root.
+            let bytes = &bytes[1..];
+
+            let delta_digest = bytes
+                .get(..digest_size)
+                .map(Output::<D>::clone_from_slice)
+                .context(OutBufferTooSmall)?;
+            let bytes = &bytes[digest_size..];
+
+            let (size, _) = varu64_decode(&bytes).map_err(|(varu_error, _)| {
+                Error::DecodeRootSizeFromVaru64 { source: varu_error }
+            })?;
 
             Ok(Self::Root {
-                delta_digest: digest,
+                delta_digest,
                 delta_size: size,
             })
         } else {
@@ -233,13 +239,17 @@ where
                 DecodedSequenceNumberForChildWasNotLargerThanOne
             );
 
-            ensure!(bytes.len() >= D::output_size(), OutBufferTooSmall);
-            let predecessor_event_link = Output::<D>::clone_from_slice(&bytes[..D::output_size()]);
-            let bytes = &bytes[D::output_size()..];
+            let predecessor_event_link = bytes
+                .get(..digest_size)
+                .map(Output::<D>::clone_from_slice)
+                .context(OutBufferTooSmall)?;
+            let bytes = &bytes[digest_size..];
 
-            ensure!(bytes.len() >= D::output_size(), OutBufferTooSmall);
-            let delta_digest = Output::<D>::clone_from_slice(&bytes[..D::output_size()]);
-            let bytes = &bytes[D::output_size()..];
+            let delta_digest = bytes
+                .get(..digest_size)
+                .map(Output::<D>::clone_from_slice)
+                .context(OutBufferTooSmall)?;
+            let bytes = &bytes[digest_size..];
 
             let (delta_size, bytes) = varu64_decode(bytes)
                 .map_err(|(err, _)| Error::DecodeDeltaSizeFromVaru64 { source: err })?;
@@ -254,14 +264,17 @@ where
                     delta_size,
                 )),
                 _ => {
-                    ensure!(bytes.len() >= D::output_size(), OutBufferTooSmall);
-                    let skip_event_link = Output::<D>::clone_from_slice(&bytes[..D::output_size()]);
-                    let bytes = &bytes[D::output_size()..];
+                    let skip_event_link = bytes
+                        .get(..digest_size)
+                        .map(Output::<D>::clone_from_slice)
+                        .context(OutBufferTooSmall)?;
+                    let bytes = &bytes[digest_size..];
 
-                    ensure!(bytes.len() >= D::output_size(), OutBufferTooSmall);
-                    let skip_delta_digest =
-                        Output::<D>::clone_from_slice(&bytes[..D::output_size()]);
-                    let bytes = &bytes[D::output_size()..];
+                    let skip_delta_digest = bytes
+                        .get(..digest_size)
+                        .map(Output::<D>::clone_from_slice)
+                        .context(OutBufferTooSmall)?;
+                    let bytes = &bytes[digest_size..];
 
                     let (skip_delta_size, _) = varu64_decode(bytes)
                         .map_err(|(err, _)| Error::DecodeSkipDeltaSizeFromVaru64 { source: err })?;
