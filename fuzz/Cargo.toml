@@ -1,0 +1,26 @@
+[package]
+name = "magma-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+blake2 = "0.9.2"
+
+[dependencies.magma-rs]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_event"
+path = "fuzz_targets/fuzz_event.rs"
+test = false
+doc = false
