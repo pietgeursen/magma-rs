@@ -1,12 +1,10 @@
-use digest::{Digest, Output, generic_array::GenericArray};
+use digest::{generic_array::GenericArray, Digest, Output};
 use snafu::{ensure, OptionExt};
-use varu64::{
-    decode as varu64_decode, decode_non_zero_u64
-};
+use varu64::{decode as varu64_decode, decode_non_zero_u64};
 
 pub mod error;
-use error::*;
 use crate::Event;
+use error::*;
 
 impl<D> Event<D>
 where
@@ -57,7 +55,6 @@ where
                     delta_size,
                 )),
                 _ => {
-
                     let (skip_event_link, bytes) = Self::decode_digest(bytes, digest_size)?;
                     let (skip_delta_digest, bytes) = Self::decode_digest(bytes, digest_size)?;
                     let (skip_delta_size, _) = varu64_decode(bytes)
@@ -78,7 +75,10 @@ where
             })
         }
     }
-    fn decode_digest<'a>(bytes: &'a[u8], digest_size: usize) -> Result<(GenericArray<u8, <D as Digest>::OutputSize>, &'a[u8]), Error> {
+    fn decode_digest<'a>(
+        bytes: &'a [u8],
+        digest_size: usize,
+    ) -> Result<(GenericArray<u8, <D as Digest>::OutputSize>, &'a [u8]), Error> {
         let delta_digest = bytes
             .get(..digest_size)
             .map(Output::<D>::clone_from_slice)
@@ -87,5 +87,3 @@ where
         Ok((delta_digest, bytes))
     }
 }
-
-
