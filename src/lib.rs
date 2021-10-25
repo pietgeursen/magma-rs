@@ -4,5 +4,6 @@ pub use core::num::NonZeroU64;
 pub use digest::{generic_array::GenericArray, Digest, Output};
 pub use frunk::Semigroup;
 pub mod event;
+pub mod replication;
 
 pub use event::Event;

@@ -5,13 +5,14 @@ edition = "2018"
 
 [features]
 default = ["std"]
-std = []
+std = ["serde/std", "serde/derive"]
 
 [dependencies]
 digest = {version = "0.9.0", default-features = false}
 frunk = {version = "0.4", default-features = false}
 snafu = {version = "0.6.10", default-features = false}
-varu64 = {path = "../varu64-rs", default-features = false}
+varu64 = {version = "0.7", default-features = false}
+serde = {version = "1", default-features = false}
 
 [dev-dependencies]
 blake2 = "0.9.2"
