@@ -1,8 +1,8 @@
 use core::convert::TryFrom;
 use core::num::NonZeroU64;
+use digest::{generic_array::GenericArray, Digest};
 use serde::{Deserialize, Serialize};
-use snafu::{Snafu, ensure};
-use digest::Digest;
+use snafu::{ensure, Snafu};
 
 use crate::Event as ValidEvent;
 
@@ -26,24 +26,67 @@ pub enum Event<'a> {
 }
 
 #[derive(Snafu, Debug)]
-pub enum DtoConversionError {
-    InvalidSequenceNumber
+pub enum Error {
+    #[snafu(display(
+        "Encoded Event had an an invalid sequence number. Child events must have an event >= 2"
+    ))]
+    InvalidSequenceNumber,
 
+    #[snafu(display(
+        "Encoded Event had an an invalid length digest. Expected length: {}, actual length: {}",
+        expected_length,
+        actual_length
+    ))]
+    InvalidDigestLength {
+        expected_length: usize,
+        actual_length: usize,
+    },
 }
 
 impl<'a, D: Digest> TryFrom<Event<'a>> for ValidEvent<D> {
-    type Error = DtoConversionError;
+    type Error = Error;
 
     fn try_from(value: Event<'a>) -> Result<Self, Self::Error> {
-        match value{
-            Event::Root { delta_digest, delta_size } => {
+        match value {
+            Event::Root {
+                delta_digest,
+                delta_size,
+            } => {
+                let digest = try_convert_slice_to_digest(delta_digest)?;
 
-            },
-            Event::Child { sequence_number, predecessor_event_link, delta_digest, delta_size, skip_event_link, skip_delta_digest, skip_delta_size } => {
+                let evt = ValidEvent::Root {
+                    delta_digest: digest,
+                    delta_size,
+                };
+                Ok(evt)
+            }
+            Event::Child {
+                sequence_number,
+                predecessor_event_link,
+                delta_digest,
+                delta_size,
+                skip_event_link,
+                skip_delta_digest,
+                skip_delta_size,
+            } => {
                 ensure!(sequence_number.get() >= 2u64, InvalidSequenceNumber);
-
-            },
+            }
         }
-        todo!()
     }
+}
+
+fn try_convert_slice_to_digest<D: Digest>(
+    delta_digest: &[u8],
+) -> Result<GenericArray<u8, <D as Digest>::OutputSize>, Error> {
+    let actual_length = delta_digest.len();
+    let expected_length = D::output_size();
+    ensure!(
+        actual_length == expected_length,
+        InvalidDigestLength {
+            expected_length,
+            actual_length
+        }
+    );
+    let digest = GenericArray::clone_from_slice(delta_digest);
+    Ok(digest)
 }

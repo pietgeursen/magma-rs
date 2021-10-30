@@ -20,10 +20,10 @@ pub enum Mode {
 
 /// Describes which data the client wants from the server.
 pub struct Request<D: Digest> {
-    /// The hash of the latest magma event for which the client already knows the accumulated value.
-    pub old: Output<D>,
     /// The hash of the magma event for which the client wants to obtain the accumulated value.
     pub new: Output<D>,
+    /// The hash of the latest magma event for which the client already knows the accumulated value if available.
+    pub old: Option<Output<D>>,
     /// Specifies which semigroup values are of interest to the client, and in which order they should be transmitted.
     pub mode: Mode,
     /// Instructs the server to omit transmitting the first `offset_value` magma events that would have been transmitted otherwise. This enables to efficiently resume responses that were interrupted by a network or endpoint failure.
