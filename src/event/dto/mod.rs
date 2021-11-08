@@ -52,7 +52,7 @@ impl<'a, D: Digest> TryFrom<Event<'a>> for ValidEvent<D> {
                 delta_digest,
                 delta_size,
             } => {
-                let digest = try_convert_slice_to_digest(delta_digest)?;
+                let digest = try_convert_slice_to_digest::<D>(delta_digest)?;
 
                 let evt = ValidEvent::Root {
                     delta_digest: digest,
@@ -70,6 +70,7 @@ impl<'a, D: Digest> TryFrom<Event<'a>> for ValidEvent<D> {
                 skip_delta_size,
             } => {
                 ensure!(sequence_number.get() >= 2u64, InvalidSequenceNumber);
+                unimplemented!();
             }
         }
     }

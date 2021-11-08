@@ -19,7 +19,7 @@ pub enum Response<'a> {
 #[derive(Snafu, Debug)]
 pub enum Error {}
 
-impl<'a, D, S> TryFrom<Response<'a>> for super::Response<'a, 'a, D, S>
+impl<'a, D, S> TryFrom<Response<'a>> for super::ResponseRef<'a, 'a, D, S>
 where
     D: Digest,
     S: Semigroup,
