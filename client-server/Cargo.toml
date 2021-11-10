@@ -1,0 +1,19 @@
+[package]
+name = "client-server"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+blake2 = "0.9.2"
+magma-core = {path = '../magma-core'}
+jsonrpc-core = "18"
+jsonrpc-core-client = "18"
+jsonrpc-derive = "18"
+
+
+
+[dev-dependencies]
+
+[[bin]]
+name = "client_server"
+path = "src/bin/client_server.rs"

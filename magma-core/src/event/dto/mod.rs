@@ -7,7 +7,7 @@ use snafu::{ensure, Snafu};
 use crate::Event as ValidEvent;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum Event<'a> {
+pub enum EventRef<'a> {
     Root {
         delta_digest: &'a [u8],
         delta_size: u64,
@@ -24,6 +24,26 @@ pub enum Event<'a> {
         skip_delta_size: u64,      // size in bytes of this.skip_delta
     },
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Event {
+    Root {
+        delta_digest: Vec<u8>,
+        delta_size: u64,
+    },
+    Child {
+        sequence_number: NonZeroU64, // The first **child** sequence_number starts at **2**
+
+        predecessor_event_link: Vec<u8>,
+        delta_digest: Vec<u8>,
+        delta_size: u64,
+
+        skip_event_link: Vec<u8>, // the skip event, None if this is the first event
+        skip_delta_digest: Vec<u8>, // change compared to the skip event
+        skip_delta_size: u64,      // size in bytes of this.skip_delta
+    },
+}
+
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -43,16 +63,16 @@ pub enum Error {
     },
 }
 
-impl<'a, D: Digest> TryFrom<Event<'a>> for ValidEvent<D> {
+impl<'a, D: Digest> TryFrom<Event> for ValidEvent<D> {
     type Error = Error;
 
-    fn try_from(value: Event<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: Event) -> Result<Self, Self::Error> {
         match value {
             Event::Root {
                 delta_digest,
                 delta_size,
             } => {
-                let digest = try_convert_slice_to_digest::<D>(delta_digest)?;
+                let digest = try_convert_slice_to_digest::<D>(&delta_digest)?;
 
                 let evt = ValidEvent::Root {
                     delta_digest: digest,

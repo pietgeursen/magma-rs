@@ -1,7 +1,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use magma_rs::*; 
+use magma_core::*; 
 use blake2::Blake2b;
 
 type MyEvent = Event<Blake2b>;

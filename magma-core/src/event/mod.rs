@@ -81,7 +81,7 @@ impl<D> Event<D>
 where
     D: Digest,
 {
-    pub fn digest(&self) -> &Output<D> {
+    pub fn delta_digest(&self) -> &Output<D> {
         match self {
             Self::Root {
                 delta_digest: digest,
@@ -209,13 +209,13 @@ mod tests {
             buffer.resize(root_event.encoding_length(), 0);
             root_event.encode(&mut buffer).unwrap();
 
-            let digest = root_event.digest();
+            let digest = root_event.delta_digest();
             assert_eq!(&buffer[1..digest.len() + 1], digest.as_slice())
         }
 
         #[test]
         fn last_bytes_of_an_encoded_root_event_contain_size_as_varu64(root_event in root_event_strategy()){
-            let digest = root_event.digest();
+            let digest = root_event.delta_digest();
             let mut buffer = Vec::new();
             buffer.resize(root_event.encoding_length(), 0);
             root_event.encode(&mut buffer).unwrap();
