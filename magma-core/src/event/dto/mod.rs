@@ -1,3 +1,6 @@
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
 use core::convert::TryFrom;
 use core::num::NonZeroU64;
 use digest::{generic_array::GenericArray, Digest};
@@ -26,6 +29,7 @@ pub enum EventRef<'a> {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg(any(feature = "alloc", feature = "std"))]
 pub enum Event {
     Root {
         delta_digest: Vec<u8>,
@@ -40,10 +44,9 @@ pub enum Event {
 
         skip_event_link: Vec<u8>, // the skip event, None if this is the first event
         skip_delta_digest: Vec<u8>, // change compared to the skip event
-        skip_delta_size: u64,      // size in bytes of this.skip_delta
+        skip_delta_size: u64,     // size in bytes of this.skip_delta
     },
 }
-
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -63,6 +66,7 @@ pub enum Error {
     },
 }
 
+#[cfg(any(feature = "alloc", feature = "std"))]
 impl<'a, D: Digest> TryFrom<Event> for ValidEvent<D> {
     type Error = Error;
 

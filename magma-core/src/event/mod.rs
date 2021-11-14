@@ -1,6 +1,6 @@
 pub mod decode;
-pub mod encode;
 pub mod dto;
+pub mod encode;
 
 pub use core::num::NonZeroU64;
 pub use digest::{generic_array::GenericArray, Digest, Output};

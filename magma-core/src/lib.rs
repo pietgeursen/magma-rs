@@ -1,12 +1,24 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub use core::num::NonZeroU64;
 pub use digest::{generic_array::GenericArray, Digest, Output};
-pub use frunk::Semigroup;
 pub use event::Event;
+pub use frunk::Semigroup;
+use snafu::AsErrorSource;
 
 pub mod event;
 pub mod replication;
+
+pub trait CanonicalEncoding {
+    type Error: AsErrorSource;
+    fn encode(buffer: &mut [u8]) -> Result<usize, Self::Error>;
+    fn decode(buffer: &[u8]) -> Result<(usize, Self), Self::Error>
+    where
+        Self: Sized;
+}
 
 #[cfg(test)]
 mod tests {
@@ -29,5 +41,4 @@ mod tests {
     //      lingo is more about replication not about publishing.
     // - api for server
     //
-
 }

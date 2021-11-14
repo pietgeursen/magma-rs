@@ -1,38 +1,25 @@
-use snafu::{Snafu, ensure, ResultExt, OptionExt};
-use std::convert::TryFrom;
+use core::convert::TryFrom;
+use snafu::{ensure, AsErrorSource, OptionExt, ResultExt, Snafu};
 
 use digest::Digest;
 use frunk::{semigroup::combine_all_option, Semigroup};
 
 use crate::replication::request::Request;
-use crate::Event;
+use crate::{CanonicalEncoding, Event};
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 pub mod dto;
 
-// There's two pathways
-// - if we build the request bit by bit, protecting the client at each step 
-// - just asking for a whole response
-// I'm not sure if I'd design the api of the requests and responses like this. I'd omit the
-// resuming.
-// I'd package the events and optional values together
-
-pub struct EventPayloadPair<D: Digest, S: Semigroup>{
+pub struct EventPayloadPair<D: Digest, S: Semigroup> {
     pub event: Event<D>,
     pub payload: Option<S>,
 }
 
-pub enum Response<D: Digest, S: Semigroup>{
+pub enum Response<D: Digest, S: Semigroup + CanonicalEncoding> {
     UnknownEvent,
-    Data(
-        Vec<EventPayloadPair<D, S>>
-    )
-}
-
-pub enum ResponseRef<'a, D: Digest, S: Semigroup>{
-    UnknownEvent,
-    Data(
-        &'a[EventPayloadPair<D, S>]
-    )
+    Data(Vec<EventPayloadPair<D, S>>),
 }
 
 ///// The data clients query for.
@@ -71,7 +58,7 @@ pub enum ResponseRef<'a, D: Digest, S: Semigroup>{
 //    },
 //}
 
-pub struct UnvalidatedResponseWithRequest<D: Digest, S: Semigroup> {
+pub struct UnvalidatedResponseWithRequest<D: Digest, S: Semigroup + CanonicalEncoding> {
     pub request: Request<D>,
     pub response: Response<D, S>,
 }
@@ -81,10 +68,11 @@ pub enum ResponseValidationError {
     UnknownEvent,
     ExpectedAtLeastOneEventInEvents,
     FirstEventHashDidNotMatchHashOfRequestNew,
-
 }
 
-impl<D: Digest, S: Semigroup> TryFrom<UnvalidatedResponseWithRequest<D, S>> for ValidResponse<D, S> {
+impl<D: Digest, S: Semigroup + CanonicalEncoding> TryFrom<UnvalidatedResponseWithRequest<D, S>>
+    for ValidResponse<D, S>
+{
     type Error = ResponseValidationError;
 
     fn try_from(value: UnvalidatedResponseWithRequest<D, S>) -> Result<Self, Self::Error> {
@@ -108,7 +96,6 @@ impl<D: Digest, S: Semigroup> TryFrom<UnvalidatedResponseWithRequest<D, S>> for 
         //
         // Then, the semigroup `values` of the response are transmitted sorted by the order of the depths of the associated magma events. Whether they are sorted in ascending or descending order is specified by the `Mode` of the request. When the client receives a semigroup value, it verifies that its hash and length exactly match the ones given in the corresponding magma event.
 
-
         todo!()
     }
 }
@@ -119,6 +106,7 @@ pub struct ValidResponse<D: Digest, S: Semigroup> {
     pub values: Vec<S>,
 }
 
+#[cfg(any(feature = "alloc", feature = "std"))]
 impl<D: Digest, S: Semigroup + Clone> ValidResponse<D, S> {
     pub fn combine_values(&self) -> Option<S> {
         combine_all_option(&self.values)

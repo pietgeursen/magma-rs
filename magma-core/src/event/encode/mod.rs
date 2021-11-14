@@ -50,7 +50,7 @@ where
 
                 // Followed by predecessor_event_link
                 out[next_byte_num..predecessor_event_link.len() + next_byte_num]
-                    .copy_from_slice(&predecessor_event_link);
+                    .copy_from_slice(predecessor_event_link);
                 next_byte_num += predecessor_event_link.len();
 
                 // Followed by the delta digest
@@ -65,7 +65,7 @@ where
                 if skip_event_link != predecessor_event_link {
                     // Followed by skip_event_link
                     out[next_byte_num..skip_event_link.len() + next_byte_num]
-                        .copy_from_slice(&skip_event_link);
+                        .copy_from_slice(skip_event_link);
                     next_byte_num += skip_event_link.len();
 
                     // Followed by the skip_delta digest

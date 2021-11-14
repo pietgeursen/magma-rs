@@ -11,7 +11,7 @@ where
     D: Digest,
 {
     pub fn decode(bytes: &[u8]) -> Result<Self, Error> {
-        ensure!(bytes.len() > 0, DecodeInputIsLengthZero);
+        ensure!(!bytes.is_empty(), DecodeInputIsLengthZero);
         let digest_size = D::output_size();
 
         // Is a Root
@@ -21,7 +21,7 @@ where
 
             let (delta_digest, bytes) = Self::decode_digest(bytes, digest_size)?;
 
-            let (size, _) = varu64_decode(&bytes).map_err(|(varu_error, _)| {
+            let (size, _) = varu64_decode(bytes).map_err(|(varu_error, _)| {
                 Error::DecodeRootSizeFromVaru64 { source: varu_error }
             })?;
 
@@ -75,10 +75,10 @@ where
             })
         }
     }
-    fn decode_digest<'a>(
-        bytes: &'a [u8],
+    fn decode_digest(
+        bytes: &[u8],
         digest_size: usize,
-    ) -> Result<(GenericArray<u8, <D as Digest>::OutputSize>, &'a [u8]), Error> {
+    ) -> Result<(GenericArray<u8, <D as Digest>::OutputSize>, &[u8]), Error> {
         let delta_digest = bytes
             .get(..digest_size)
             .map(Output::<D>::clone_from_slice)

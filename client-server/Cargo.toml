@@ -9,6 +9,7 @@ magma-core = {path = '../magma-core'}
 jsonrpc-core = "18"
 jsonrpc-core-client = "18"
 jsonrpc-derive = "18"
+snafu = "0.6.10"
 
 
 
