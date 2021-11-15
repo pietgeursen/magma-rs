@@ -22,9 +22,10 @@ where
         delta_digest: Output<D>,
         delta_size: u64,
 
-        skip_event_link: Output<D>, // the skip event, None if this is the first event
+        // TODO make these optional
+        skip_event_link: Output<D>,   // the skip event
         skip_delta_digest: Output<D>, // change compared to the skip event
-        skip_delta_size: u64,       // size in bytes of this.skip_delta
+        skip_delta_size: u64,         // size in bytes of this.skip_delta
     },
 }
 

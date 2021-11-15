@@ -49,13 +49,13 @@ impl CanonicalEncoding for U32Semigroup {
         Ok(4)
     }
 
-    fn decode(mut buffer: &[u8]) -> core::result::Result<(&[u8], Self), Self::Error>
+    fn decode(mut buffer: &[u8]) -> core::result::Result<(Self, &[u8]), Self::Error>
     where
         Self: Sized,
     {
         ensure!(buffer.len() > 4, BufferTooSmall);
         let result = buffer.get_u32();
-        Ok((buffer, U32Semigroup(result)))
+        Ok((U32Semigroup(result), buffer))
     }
 
     fn encoding_length(&self) -> usize {

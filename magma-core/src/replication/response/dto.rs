@@ -54,7 +54,7 @@ where
                             .payload
                             .as_ref()
                             .map(|payload| {
-                                let (_, res) = S::decode(&payload).context(DecodePayload)?;
+                                let (res, _) = S::decode(&payload).context(DecodePayload)?;
                                 Ok(res)
                             })
                             .transpose()?;
