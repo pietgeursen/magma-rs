@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod dto;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Copy, Clone)]
 pub enum Ordering {
     /// the items in order of ascending depth
     Ascending,
@@ -11,7 +11,7 @@ pub enum Ordering {
     Descending,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Copy, Clone)]
 /// Specifies which items are of interest to the client
 pub enum PathLength {
     /// the items along the shortest path

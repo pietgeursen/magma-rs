@@ -5,7 +5,8 @@ edition = "2018"
 
 [dependencies]
 blake2 = "0.9.2"
-magma-core = {path = '../magma-core'}
+bytes = "1.1"
+magma-core = {path = '../magma-core', default-features=false, features=["alloc"]}
 jsonrpc-core = "18"
 jsonrpc-core-client = "18"
 jsonrpc-derive = "18"

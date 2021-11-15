@@ -13,11 +13,13 @@ pub mod event;
 pub mod replication;
 
 pub trait CanonicalEncoding {
-    type Error: AsErrorSource;
-    fn encode(buffer: &mut [u8]) -> Result<usize, Self::Error>;
-    fn decode(buffer: &[u8]) -> Result<(usize, Self), Self::Error>
+    type Error: AsErrorSource + core::fmt::Debug;
+    fn encode(&self, buffer: &mut [u8]) -> Result<usize, Self::Error>;
+    fn decode(buffer: &[u8]) -> Result<(&[u8], Self), Self::Error>
     where
         Self: Sized;
+
+    fn encoding_length(&self) -> usize;
 }
 
 #[cfg(test)]
